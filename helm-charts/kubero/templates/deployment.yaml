@@ -37,9 +37,11 @@ spec:
           volumeMounts:
             - mountPath: /etc/kubero
               name: kubero-config-volume
+            {{- if .Values.kubero.database.enabled }}
             - mountPath: /app/server/db
               name: kubero-data
               readOnly: false
+            {{- end }}
           env:
             - name: NODE_TLS_REJECT_UNAUTHORIZED
               value: "0"
@@ -197,6 +199,9 @@ spec:
               value: /etc/kubero/config.yaml
             - name: PORT
               value: "{{ .Values.service.port }}"
+            {{- with .Values.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
@@ -215,9 +220,11 @@ spec:
         - name: kubero-config-volume
           configMap:
             name: kubero-config
+        {{- if .Values.kubero.database.enabled }}
         - name: kubero-data
           persistentVolumeClaim:
             claimName: {{ include "kubero.fullname" . }}-data
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

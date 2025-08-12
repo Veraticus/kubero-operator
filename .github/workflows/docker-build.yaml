@@ -1,71 +1,127 @@
-name: Docker
+name: Build Multi-Arch Docker Image
 
 on:
   push:
-    # Publish `master` as Docker `latest` image.
-    #branches:
-    #  - main
-
-    # Publish `v1.2.3` tags as releases.
+    branches:
+      - main
+      - feat/helm-improvements
     tags:
-      - v*
-  workflow_dispatch:
-
-  # Run tests for any PRs.
-  #pull_request:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
 
 env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: veraticus/kubero-operator
   SDK_VERSION: "v1.29.0"
 
 jobs:
-  # Push image to GitHub Packages.
-  # See also https://docs.docker.com/docker-hub/builds/
-  build:
-    runs-on: ubuntu-latest
+  build-and-push:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: "Install operator-sdk"
-        run : |
-          curl -L -o /usr/local/bin/operator-sdk "https://github.com/operator-framework/operator-sdk/releases/download/${SDK_VERSION}/operator-sdk_linux_amd64"
+      - name: Install operator-sdk
+        run: |
+          ARCH=${{ matrix.arch }}
+          SDK_ARCH=${ARCH}
+          # operator-sdk uses different naming for arm64
+          if [ "$ARCH" = "arm64" ]; then
+            SDK_ARCH="arm64"
+          fi
+          curl -L -o /usr/local/bin/operator-sdk "https://github.com/operator-framework/operator-sdk/releases/download/${SDK_VERSION}/operator-sdk_linux_${SDK_ARCH}"
           chmod +x /usr/local/bin/operator-sdk
+          operator-sdk version
 
-      - name: "Get Version"
-        id: get_version
-        run: |
-          # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-          # Strip "v" prefix from tag name
-          #[[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "main" ] && VERSION=latest
-
-          echo "IMG=ghcr.io/kubero-dev/kubero-operator/kuberoapp:${VERSION}" >> $GITHUB_ENV
-          echo "BUNDLE_IMG=ghcr.io/kubero-dev/kubero-operator/kuberoapp-bundle:${VERSION}" >> $GITHUB_ENV
-
-          echo ::set-output name=VERSION::$(cat VERSION)
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
         with:
-          platforms: 'arm64,amd64'
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Workaround: https://github.com/docker/build-push-action/issues/461
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/kuberoapp
+          tags: |
+            type=ref,event=branch,suffix=-${{ matrix.arch }}
+            type=ref,event=pr,suffix=-${{ matrix.arch }}
+            type=semver,pattern={{version}},suffix=-${{ matrix.arch }}
+            type=sha,prefix={{branch}}-,suffix=-${{ matrix.arch }},format=short
 
-      - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+          # Disable provenance to create OCI images instead of Docker manifest lists
+          provenance: false
 
-      - name: Build images
+  # Create multi-arch manifest
+  manifest:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/kuberoapp
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix={{branch}}-,format=short
+
+      - name: Create and push multi-arch manifests
         run: |
-          make docker-build
-          make bundle-build
-
-#      - name: Push image ghcr.io
-#        run: |
-#          make docker-push
-#          make bundle-push
+          # Convert newline-separated tags to space-separated list
+          TAGS="${{ steps.meta.outputs.tags }}"
+          for tag in $(echo "$TAGS" | tr '\n' ' '); do
+            echo "Creating manifest for $tag"
+            docker manifest create $tag \
+              ${tag}-amd64 \
+              ${tag}-arm64
+            docker manifest push $tag
+          done

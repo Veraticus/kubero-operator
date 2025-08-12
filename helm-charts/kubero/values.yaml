@@ -114,6 +114,19 @@ tolerations: []
 
 affinity: {}
 
+# Additional environment variables to pass to the container
+# Can be used for DATABASE_URL when using external database
+extraEnvVars: []
+# Example:
+# - name: DATABASE_URL
+#   value: "postgresql://user:pass@host:5432/kubero"
+# Or from a secret:
+# - name: DATABASE_URL
+#   valueFrom:
+#     secretKeyRef:
+#       name: kubero-database
+#       key: DATABASE_URL
+
 kubero:
   debug: ""
   namespace: kubero
