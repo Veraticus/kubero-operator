@@ -68,6 +68,7 @@ spec:
             - name: KUBERO_BUILD_REGISTRY
               value: "{{ .Values.registry.host }}"
             {{- end }}
+            {{- if .Values.kubero.secrets.mountBuiltinSecrets }}
             - name: KUBERO_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
@@ -151,16 +152,19 @@ spec:
                   name: kubero-secrets
                   key: KUBECONFIG_BASE64
                   optional: true
+            {{- end }}
             {{- if .Values.prometheus.enabled }}
             - name: KUBERO_PROMETHEUS_ENDPOINT
               value: {{ .Values.prometheus.endpoint | quote }}
             {{- end }}
             {{- if .Values.kubero.auth.github.enabled }}
+            {{- if .Values.kubero.secrets.mountBuiltinSecrets }}
             - name: GITHUB_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: kubero-secrets
                   key: GITHUB_CLIENT_SECRET
+            {{- end }}
             - name: GITHUB_CLIENT_ID
               value: {{ .Values.kubero.auth.github.id | quote }}
             - name: GITHUB_CLIENT_CALLBACKURL
@@ -169,17 +173,19 @@ spec:
               value: {{ .Values.kubero.auth.github.org | quote }}
             {{- end }}
             {{- if .Values.kubero.auth.oauth2.enabled }}
+            {{- if .Values.kubero.secrets.mountBuiltinSecrets }}
             - name: OAUTH2_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: kubero-secrets
                   key: OAUTH2_CLIENT_SECRET
+            {{- end }}
             - name: OAUTH2_CLIENT_NAME
               value: {{ .Values.kubero.auth.oauth2.name | quote }}
             - name: OAUTH2_CLIENT_ID
               {{- if .Values.kubero.auth.oauth2.id }}
               value: {{ .Values.kubero.auth.oauth2.id | quote }}
-              {{ else }}
+              {{- else if .Values.kubero.secrets.mountBuiltinSecrets }}
               valueFrom:
                 secretKeyRef:
                   name: kubero-secrets

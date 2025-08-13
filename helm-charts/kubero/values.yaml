@@ -133,6 +133,10 @@ kubero:
   context: inClusterContext
   webhook_url: http://kubero.localhost/api/repo/webhooks
   #sessionKey: "randomString"
+  secrets:
+    # When false, does not mount kubero-secrets at all
+    # Allows providing all secrets via extraEnvVars
+    mountBuiltinSecrets: true
   auth:
     github:
       # set your secrets in the secret resource
