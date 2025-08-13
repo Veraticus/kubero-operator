@@ -13,7 +13,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: veraticus/kubero-operator
+  IMAGE_NAME: ${{ github.repository }}
   SDK_VERSION: "v1.29.0"
 
 jobs:
