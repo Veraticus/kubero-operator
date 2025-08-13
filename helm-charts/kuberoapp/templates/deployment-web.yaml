@@ -75,6 +75,19 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
+          {{- if .Values.envFrom }}
+          envFrom:
+            {{- range .Values.envFrom }}
+            {{- if .secretRef }}
+            - secretRef:
+                name: {{ .secretRef.name }}
+            {{- end }}
+            {{- if .configMapRef }}
+            - configMapRef:
+                name: {{ .configMapRef.name }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
           volumeMounts:
             - mountPath: /home/kubero/.ssh-mounted
               name: deployment-keys
@@ -121,6 +134,19 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
+          {{- if .Values.envFrom }}
+          envFrom:
+            {{- range .Values.envFrom }}
+            {{- if .secretRef }}
+            - secretRef:
+                name: {{ .secretRef.name }}
+            {{- end }}
+            {{- if .configMapRef }}
+            - configMapRef:
+                name: {{ .configMapRef.name }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.image.containerPort | default "8080" }}
