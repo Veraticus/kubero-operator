@@ -18,7 +18,7 @@ spec:
         {{- include "kuberoapp.selectorLabels" . | nindent 8 }}
     spec:
       restartPolicy: Never
-      serviceAccountName: kubero-operator-controller-manager
+      serviceAccountName: {{ .Values.name }}-kuberoapp
       containers:
       - name: trigger-build
         image: bitnami/kubectl:latest
