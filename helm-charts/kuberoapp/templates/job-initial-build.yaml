@@ -76,7 +76,7 @@ spec:
             buildstrategy: {{ .Values.buildstrategy }}
             {{- if .Values.gitrepo }}
             git:
-              url: {{ .Values.gitrepo.clone_url | default .Values.gitrepo.ssh_url }}
+              url: {{ .Values.gitrepo.ssh_url | default .Values.gitrepo.clone_url }}
               ref: {{ .Values.branch }}
             {{- end }}
             repository:
