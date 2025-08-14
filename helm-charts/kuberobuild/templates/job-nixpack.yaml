@@ -37,7 +37,7 @@ spec:
           - name: REPOSITORY
             value: {{ .Values.repository.image | default "" }}
           - name: TAG
-            value: {{ .Values.repository.tag | default "latest"}}
+            value: "{{ .Values.repository.tag | default "latest"}}"
           - name: APP
             value: {{ .Values.app }}
           - name: PIPELINE
@@ -132,7 +132,7 @@ spec:
           - name: REPOSITORY_OVERRIDE
             value: {{ .Values.repository.image | default "" }}
           - name: TAG
-            value: {{ .Values.repository.tag | default "latest"}}
+            value: "{{ .Values.repository.tag | default "latest"}}"
           - name: PIPELINE
             value: {{ .Values.pipeline }}
           - name: APP

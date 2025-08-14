@@ -1,4 +1,4 @@
-{{- if and (eq .Values.deploymentstrategy "git") (or (eq .Values.buildstrategy "dockerfile") (eq .Values.buildstrategy "nixpacks") (eq .Values.buildstrategy "buildpacks")) }}
+{{- if and (eq .Values.deploymentstrategy "git") (or (eq .Values.buildstrategy "dockerfile") (eq .Values.buildstrategy "nixpacks") (eq .Values.buildstrategy "buildpacks")) (not .Values.skipInitialBuild) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -6,6 +6,7 @@ metadata:
   namespace: {{ .Values.pipeline }}-{{ .Values.phase }}
   labels:
     {{- include "kuberoapp.labels" . | nindent 4 }}
+    job-type: initial-build
   annotations:
     "helm.sh/hook": post-install
     "helm.sh/hook-weight": "0"
@@ -26,6 +27,23 @@ spec:
         - /bin/sh
         - -c
         - |
+          echo "Checking if initial build is needed for {{ .Values.name }}"
+          
+          # Check if any KuberoBuild already exists for this app
+          EXISTING_BUILDS=$(kubectl get kuberobuilds -n {{ .Values.pipeline }}-{{ .Values.phase }} -l app={{ .Values.name }} --no-headers 2>/dev/null | wc -l)
+          
+          if [ "$EXISTING_BUILDS" -gt "0" ]; then
+            echo "Build already exists for {{ .Values.name }}, skipping initial build"
+            exit 0
+          fi
+          
+          # Check if the app already has an image configured (not the idler)
+          CURRENT_IMAGE=$(kubectl get kuberoapp {{ .Values.name }} -n {{ .Values.pipeline }}-{{ .Values.phase }} -o jsonpath='{.spec.image.repository}' 2>/dev/null || echo "")
+          if [ -n "$CURRENT_IMAGE" ] && [ "$CURRENT_IMAGE" != "ghcr.io/kubero-dev/idler" ]; then
+            echo "App already has a custom image configured: $CURRENT_IMAGE, skipping initial build"
+            exit 0
+          fi
+          
           echo "Triggering initial build for {{ .Values.name }}"
           # Wait for the app to be fully created
           sleep 5
