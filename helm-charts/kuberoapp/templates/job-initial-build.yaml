@@ -1,0 +1,56 @@
+{{- if and (eq .Values.deploymentstrategy "git") (or (eq .Values.buildstrategy "dockerfile") (eq .Values.buildstrategy "nixpacks") (eq .Values.buildstrategy "buildpacks")) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kuberoapp.fullname" . }}-initial-build
+  namespace: {{ .Values.pipeline }}-{{ .Values.phase }}
+  labels:
+    {{- include "kuberoapp.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    metadata:
+      labels:
+        {{- include "kuberoapp.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: kubero-operator-controller-manager
+      containers:
+      - name: trigger-build
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Triggering initial build for {{ .Values.name }}"
+          # Wait for the app to be fully created
+          sleep 5
+          
+          # Create a KuberoBuild resource to trigger the build
+          cat <<EOF | kubectl apply -f -
+          apiVersion: application.kubero.dev/v1alpha1
+          kind: KuberoBuild
+          metadata:
+            name: {{ .Values.name }}-initial-$(date +%s)
+            namespace: {{ .Values.pipeline }}-{{ .Values.phase }}
+          spec:
+            app: {{ .Values.name }}
+            pipeline: {{ .Values.pipeline }}
+            phase: {{ .Values.phase }}
+            buildstrategy: {{ .Values.buildstrategy }}
+            {{- if .Values.gitrepo }}
+            gitrepo:
+              url: {{ .Values.gitrepo.clone_url | default .Values.gitrepo.ssh_url }}
+              ref: {{ .Values.branch }}
+            {{- end }}
+            registry:
+              repository: {{ .Values.image.repository | default (printf "%s/%s-%s" (or .Values.buildRegistry (or $.Values.global.buildRegistry "localhost:5000")) .Values.pipeline .Values.name) }}
+              tag: {{ .Values.branch }}-$(date +%s)
+          EOF
+          
+          echo "Initial build triggered successfully"
+{{- end }}
