@@ -66,7 +66,7 @@ spec:
             {{- end }}
             {{- if .Values.registry.enabled }}
             - name: KUBERO_BUILD_REGISTRY
-              value: "{{ .Values.registry.host }}{{- if .Values.registry.port }}:{{ .Values.registry.port }}{{- end }}{{- if .Values.registry.subpath }}{{ .Values.registry.subpath }}{{- end }}"
+              value: "{{ .Values.registry.host }}{{- if .Values.registry.port }}:{{ .Values.registry.port }}{{- end }}{{- if .Values.registry.subpath }}/{{ .Values.registry.subpath }}{{- end }}"
             {{- end }}
             {{- if .Values.kubero.secrets.mountBuiltinSecrets }}
             - name: KUBERO_WEBHOOK_SECRET
