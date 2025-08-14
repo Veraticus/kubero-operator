@@ -48,8 +48,8 @@ spec:
               ref: {{ .Values.branch }}
             {{- end }}
             registry:
-              repository: {{ .Values.image.repository | default (printf "%s/%s-%s" (or .Values.buildRegistry (or $.Values.global.buildRegistry "localhost:5000")) .Values.pipeline .Values.name) }}
               tag: {{ .Values.branch }}-$(date +%s)
+              # Repository will be constructed from pipeline's registry configuration
           EOF
           
           echo "Initial build triggered successfully"

@@ -35,15 +35,30 @@ spec:
       containers:
         - env:
           - name: REPOSITORY
-            value: {{ .Values.repository.image }}
+            value: {{ .Values.repository.image | default "" }}
           - name: TAG
             value: {{ .Values.repository.tag | default "latest"}}
           - name: APP
             value: {{ .Values.app }}
+          - name: PIPELINE
+            value: {{ .Values.pipeline }}
           command:
           - sh
           - -c
-          - kubectl patch kuberoapps $APP --type=merge -p '{"spec":{"image":{"repository":"'$REPOSITORY'","tag":"'$TAG'"}}}'
+          - |
+            # If REPOSITORY is not provided, construct it from pipeline's registry
+            if [ -z "$REPOSITORY" ]; then
+              echo "Repository not provided, fetching from pipeline configuration..."
+              REGISTRY=$(kubectl get kuberopipeline $PIPELINE -n kubero -o jsonpath='{.spec.registry.host}')
+              if [ -n "$REGISTRY" ]; then
+                REPOSITORY="${REGISTRY}/${PIPELINE}-${APP}"
+                echo "Using registry from pipeline: $REPOSITORY"
+              else
+                echo "Error: No registry found in pipeline configuration"
+                exit 1
+              fi
+            fi
+            kubectl patch kuberoapps $APP --type=merge -p '{"spec":{"image":{"repository":"'$REPOSITORY'","tag":"'$TAG'"}}}'
           image: bitnami/kubectl:latest
           imagePullPolicy: Always
           name: deploy
@@ -76,10 +91,33 @@ spec:
             name: app-storage
           workingDir: /app
         - name: build
-          args:
-          - '-app=.'
-          - {{ .Values.repository.image }}:{{ .Values.repository.tag | default "latest"}}
-          command: ['/cnb/lifecycle/creator']
+          env:
+          - name: PIPELINE
+            value: {{ .Values.pipeline }}
+          - name: APP
+            value: {{ .Values.app }}
+          - name: TAG
+            value: {{ .Values.repository.tag | default "latest"}}
+          - name: REPOSITORY_OVERRIDE
+            value: {{ .Values.repository.image | default "" }}
+          command:
+          - sh
+          - -c
+          - |
+            # Construct repository URL from pipeline if not provided
+            if [ -n "$REPOSITORY_OVERRIDE" ]; then
+              REPOSITORY="$REPOSITORY_OVERRIDE"
+            else
+              REGISTRY=$(kubectl get kuberopipeline $PIPELINE -n kubero -o jsonpath='{.spec.registry.host}')
+              if [ -n "$REGISTRY" ]; then
+                REPOSITORY="${REGISTRY}/${PIPELINE}-${APP}"
+              else
+                echo "Error: No registry found in pipeline configuration"
+                exit 1
+              fi
+            fi
+            echo "Building image: ${REPOSITORY}:${TAG}"
+            /cnb/lifecycle/creator -app=. "${REPOSITORY}:${TAG}"
           # https://github.com/buildpacks/pack/issues/564#issuecomment-943345649
           # https://github.com/buildpacks/spec/blob/platform/v0.13/platform.md#creator
           #command: ['/cnb/lifecycle/creator', '-app=.', '-buildpacks=/cnb/buildpacks', '-platform=/platform', '-run-image=ghcr.io/kubero-dev/run:v1.4.0', '-uid=1000', '-gid=1000', 'kubero-local-dev-0037732.loca.lt/example/exampled:latest']
