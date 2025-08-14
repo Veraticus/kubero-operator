@@ -9,7 +9,7 @@ data:
     # When pulling "golang:1.21-alpine", it will try docker.io first, then quay.io, etc.
     unqualified-search-registries = ['docker.io', 'quay.io', 'registry.access.redhat.com']
 
-    # Local insecure registry configuration
+    # Zot registry via internal ALB (HTTPS with valid cert)
     [[registry]]
-    location = "zot.zot-system.svc.cluster.local:5000"
-    insecure = true
+    location = "zot.kubero.atlasinternal.io"
+    insecure = false
