@@ -5,17 +5,11 @@ metadata:
   namespace: {{ .Values.pipeline }}-{{ .Values.phase }}
 data:
   registries.conf: |
-    unqualified-search-registries = ["docker.io", "quay.io", "registry.access.redhat.com"]
+    # List of registries to search for unqualified image names (short names)
+    # When pulling "golang:1.21-alpine", it will try docker.io first, then quay.io, etc.
+    unqualified-search-registries = ['docker.io', 'quay.io', 'registry.access.redhat.com']
 
+    # Local insecure registry configuration
     [[registry]]
-    location = "docker.io"
-    insecure = false
-
-    [registries.search]
-    registries = ['docker.io', 'quay.io', 'registry.access.redhat.com']
-
-    [registries.insecure]
-    registries = ['zot.zot-system.svc.cluster.local:5000']
-
-    [registries.block]
-    registries = []
+    location = "zot.zot-system.svc.cluster.local:5000"
+    insecure = true
