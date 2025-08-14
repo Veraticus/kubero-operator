@@ -137,6 +137,10 @@ spec:
           - mountPath: /etc/buildah/auth
             name: pull-secret
             readOnly: true
+          - mountPath: /etc/containers/registries.conf
+            name: buildah-registries-conf
+            subPath: registries.conf
+            readOnly: true
           workingDir: /app
       restartPolicy: Never
       schedulerName: default-scheduler
@@ -154,5 +158,9 @@ spec:
         secret:
           defaultMode: 384
           secretName: kubero-pull-secret
+      - name: buildah-registries-conf
+        configMap:
+          name: buildah-registries-conf
+          defaultMode: 0644
   ttlSecondsAfterFinished: 31536000
 {{- end }}

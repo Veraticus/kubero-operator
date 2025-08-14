@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildah-registries-conf
+  namespace: {{ .Values.pipeline }}-{{ .Values.phase }}
+data:
+  registries.conf: |
+    unqualified-search-registries = ["docker.io", "quay.io", "registry.access.redhat.com"]
+
+    [[registry]]
+    location = "docker.io"
+    insecure = false
+
+    [registries.search]
+    registries = ['docker.io', 'quay.io', 'registry.access.redhat.com']
+
+    [registries.insecure]
+    registries = ['zot.zot-system.svc.cluster.local:5000']
+
+    [registries.block]
+    registries = []
