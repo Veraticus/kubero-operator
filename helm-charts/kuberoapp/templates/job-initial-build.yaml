@@ -45,6 +45,20 @@ spec:
           fi
           
           echo "Triggering initial build for {{ .Values.name }}"
+          
+          # Fetch the registry from the pipeline
+          REGISTRY=$(kubectl get kuberopipeline {{ .Values.pipeline }} -n kubero -o jsonpath='{.spec.registry.host}')
+          if [ -z "$REGISTRY" ]; then
+            echo "Error: No registry found in pipeline configuration"
+            exit 1
+          fi
+          
+          TIMESTAMP=$(date +%s)
+          REPOSITORY="${REGISTRY}/{{ .Values.pipeline }}-{{ .Values.name }}"
+          
+          echo "Using registry: $REGISTRY"
+          echo "Repository: $REPOSITORY"
+          
           # Wait for the app to be fully created
           sleep 5
           
@@ -53,7 +67,7 @@ spec:
           apiVersion: application.kubero.dev/v1alpha1
           kind: KuberoBuild
           metadata:
-            name: {{ .Values.name }}-initial-$(date +%s)
+            name: {{ .Values.name }}-initial-${TIMESTAMP}
             namespace: {{ .Values.pipeline }}-{{ .Values.phase }}
           spec:
             app: {{ .Values.name }}
@@ -61,13 +75,13 @@ spec:
             phase: {{ .Values.phase }}
             buildstrategy: {{ .Values.buildstrategy }}
             {{- if .Values.gitrepo }}
-            gitrepo:
+            git:
               url: {{ .Values.gitrepo.clone_url | default .Values.gitrepo.ssh_url }}
               ref: {{ .Values.branch }}
             {{- end }}
-            registry:
-              tag: {{ .Values.branch }}-$(date +%s)
-              # Repository will be constructed from pipeline's registry configuration
+            repository:
+              image: ${REPOSITORY}
+              tag: {{ .Values.branch }}-${TIMESTAMP}
           EOF
           
           echo "Initial build triggered successfully"

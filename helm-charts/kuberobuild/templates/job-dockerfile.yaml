@@ -35,7 +35,7 @@ spec:
       containers:
         - env:
           - name: REPOSITORY
-            value: {{ .Values.repository.image | default "" }}
+            value: "{{ .Values.repository.image | default "" }}"
           - name: TAG
             value: "{{ .Values.repository.tag | default "latest"}}"
           - name: APP
@@ -114,7 +114,7 @@ spec:
           - name: REGISTRY_AUTH_FILE
             value: /etc/buildah/auth/.dockerconfigjson
           - name: REPOSITORY_OVERRIDE
-            value: {{ .Values.repository.image | default "" }}
+            value: "{{ .Values.repository.image | default "" }}"
           - name: TAG
             value: "{{ .Values.repository.tag | default "latest"}}"
           - name: PIPELINE

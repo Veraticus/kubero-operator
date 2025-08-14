@@ -35,7 +35,7 @@ spec:
       containers:
         - env:
           - name: REPOSITORY
-            value: {{ .Values.repository.image | default "" }}
+            value: "{{ .Values.repository.image | default "" }}"
           - name: TAG
             value: "{{ .Values.repository.tag | default "latest"}}"
           - name: APP
@@ -99,7 +99,7 @@ spec:
           - name: TAG
             value: "{{ .Values.repository.tag | default "latest"}}"
           - name: REPOSITORY_OVERRIDE
-            value: {{ .Values.repository.image | default "" }}
+            value: "{{ .Values.repository.image | default "" }}"
           command:
           - sh
           - -c
