@@ -1,13 +1,9 @@
-{{- $name := .Values.name -}}
-{{- range $index, $phase := .Values.phases }}
-{{- if ne $index 0 }}
----
-{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: buildah-registries-conf
-  namespace: {{ $name }}-{{ $phase.name }}
+  labels:
+    {{- include "kuberoapp.labels" . | nindent 4 }}
 data:
   registries.conf: |
     # List of registries to search for unqualified image names (short names)
@@ -18,4 +14,3 @@ data:
     [[registry]]
     location = "zot.kubero.atlasinternal.io"
     insecure = false
-{{- end }}
