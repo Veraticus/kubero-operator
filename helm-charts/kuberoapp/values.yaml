@@ -7,6 +7,7 @@ buildpack: Docker
 deploymentstrategy: git # git|docker
 buildstrategy: plain # plain|nixpacks|dockerfile|kpacks|external
 registry: registry-service.kubero.svc.cluster.local:5000
+pullthroughCachePrefix: ""  # Optional: prefix for Docker Hub images (e.g., ECR pull-through cache)
 sleep: disabled
 restartedAt: 
 

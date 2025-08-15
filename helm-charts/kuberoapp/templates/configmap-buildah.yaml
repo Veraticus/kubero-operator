@@ -7,8 +7,21 @@ metadata:
 data:
   registries.conf: |
     # List of registries to search for unqualified image names (short names)
-    # When pulling "golang:1.21-alpine", it will try docker.io first, then quay.io, etc.
+    # When pulling "golang:1.21-alpine", it will try the configured registries in order
+    {{- if .Values.pullthroughCachePrefix }}
+    # Using pullthrough cache prefix for Docker Hub images
+    unqualified-search-registries = ['{{ .Values.pullthroughCachePrefix }}docker.io', 'quay.io', 'registry.access.redhat.com']
+    
+    # Docker Hub via pullthrough cache
+    [[registry]]
+    location = "docker.io"
+    mirror = [
+      { location = "{{ .Values.pullthroughCachePrefix }}docker.io" }
+    ]
+    {{- else }}
+    # Direct access to registries (no pullthrough cache configured)
     unqualified-search-registries = ['docker.io', 'quay.io', 'registry.access.redhat.com']
+    {{- end }}
 
     # Zot registry via internal ALB (HTTPS with valid cert)
     [[registry]]
