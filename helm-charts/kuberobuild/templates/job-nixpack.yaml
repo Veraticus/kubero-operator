@@ -160,8 +160,8 @@ spec:
           workingDir: /app
       restartPolicy: Never
       schedulerName: default-scheduler
-      serviceAccount: {{ .Values.app }}-kuberoapp
-      serviceAccountName: {{ .Values.app }}-kuberoapp
+      serviceAccount: {{ .Values.app }}
+      serviceAccountName: {{ .Values.app }}
       terminationGracePeriodSeconds: 30
       volumes:
       - name: deployment-keys
