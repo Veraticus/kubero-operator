@@ -16,3 +16,4 @@ data:
     [[registry]]
     location = "zot.kubero.atlasinternal.io"
     insecure = false
+{{- end }}
