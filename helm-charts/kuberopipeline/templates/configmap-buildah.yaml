@@ -1,7 +1,11 @@
+{{- $name := .Values.name -}}
+{{- range .Values.phases }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: buildah-registries-conf
+  namespace: {{ $name }}-{{ . }}
 data:
   registries.conf: |
     # List of registries to search for unqualified image names (short names)
